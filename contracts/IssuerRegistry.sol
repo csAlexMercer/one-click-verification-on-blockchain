@@ -24,6 +24,7 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
     event IssuerRegistered(address indexed issuerAddress, string name, string location, uint256 timestamp);
     event IssuerUpdated(address indexed IssuerAddress, string name, string location, uint256 timestamp);
     event IssuerDeactivated(address indexed issuerAddress, uint256 timestamp);
+    event IssuerReactivated(address indexed issuerAddress, uint256 timestamp);
     event CertificateCountUpdated(address indexed issuerAddress, uint256 newCount);
 
     modifier onlyRegisteredIssuer(){
@@ -65,11 +66,38 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
             emit IssuerRegistered(_issuerAddress, _name, _location, block.timestamp);
         }
 
-    function updateIssuer(){}
+    function updateIssuer(address _issuerAddress, string _name, string _location)
+        external onlyOwner
+        validAddress(_issuerAddress)
+        validString(_name)
+        validString(_location)
+        nonReentrant{
+        require(isRegistered[_issuerAddress], "IssuerRegistry: Issuer not registered.");
 
-    function deactivateIssuer(){}
+        issuers[_issuerAddress].name = _name;
+        issuers[_issuerAddress].location = _location;
 
-    function reactivateIssuer(){}
+        emit IssuerUpdated(_issuerAddress, _name, _location, block.timestamp);
+    }
+
+    function deactivateIssuer(address _issuerAddress)
+        external onlyOwner validAddress(_issuerAddress) nonReentrant{
+        require(isRegistered[_issuerAddress], "IssuerRegistry: Issuer not registered.");
+        require(issuers[_issuerAddress].isActive, "IssuerRegistry: Issuer is already deactivated");
+
+        issuers[_issuerAddress].isActive = false;
+        emit IssuerDeactivated(_issuerAddress, block.timestamp);
+    }
+
+
+    function reactivateIssuer(address _issuerAddress)
+        external onlyOwner validAddress(_issuerAddress) nonReentrant{
+        require(isRegistered[_issuerAddress], "IssuerRegistry: Issuer not registered.");
+        require(!issuers[_issuerAddress].isActive, "IssuerRegistry: Issuer is already activated");
+
+        issuers[_issuerAddress].isActive = true;
+        emit IssuerReactivated(_issuerAddress, block.timestamp);
+    }
 
     function incrementCertificateCount(){}
 
