@@ -6,19 +6,19 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract IssuerRegistry is Ownable, ReentrancyGuard{
-    usings Strings for uint256;
+    using Strings for uint256;
 
     struct Issuer{
         string name;
         string location;
         uint256 registrationTime;
         bool isActive;
-        uint256 totalCertificatesIssues;
+        uint256 totalCertificatesIssued;
     }
 
-    mapping(address => Issuer) privare issuers;
+    mapping(address => Issuer) private issuers;
     address[] private issuerAddresses;
-    mapping(address => bool) privare isRegistered;
+    mapping(address => bool) private isRegistered;
     uint256 private totalIssuers;
 
     event IssuerRegistered(address indexed issuerAddress, string name, string location, uint256 timestamp);
@@ -55,7 +55,7 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
                 name: _name,
                 location: _location,
                 registrationTime: block.timestamp,
-                isActive: true;
+                isActive: true,
                 totalCertificatesIssued: 0
             });
 
@@ -66,7 +66,7 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
             emit IssuerRegistered(_issuerAddress, _name, _location, block.timestamp);
         }
 
-    function updateIssuer(address _issuerAddress, string _name, string _location)
+    function updateIssuer(address _issuerAddress, string memory _name, string memory _location)
         external onlyOwner
         validAddress(_issuerAddress)
         validString(_name)
@@ -99,23 +99,58 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
         emit IssuerReactivated(_issuerAddress, block.timestamp);
     }
 
-    function incrementCertificateCount(){}
-
-    function isRegisteredIssuer(){}
-
-    function isAddressRegistered(address _issuerAddress){}
-
-    function getIssuerInfo(){}
-
-    function getIssuerName(){}
-
-    function getTotalIssuers(){}
-
-    function getAllIssuers(){}
-
-    function getActivateIssuers(){}
-
-    function getContractStats(){}
+    function incrementCertificateCount(address _issuerAddress) external validAddress(_issuerAddress){
+        require(isRegistered[_issuerAddress], "IssuerRegistry: Issuer not registered");
+        issuers[_issuerAddress].totalCertificatesIssued++;
+        emit CertificateCountUpdated(_issuerAddress, issuers[_issuerAddress].totalCertificatesIssued);
+    }
 
 
+    function isRegisteredIssuer(address _issuerAddress) external view  returns (bool){
+        return isRegistered[_issuerAddress] && issuers[_issuerAddress].isActive;
+    }
+
+    function isAddressRegistered(address _issuerAddress)external view  returns (bool){
+        return isRegistered[_issuerAddress];
+    }
+
+    function getIssuerInfo(address _issuerAddress) external view validAddress(_issuerAddress)
+        returns (string memory name, string memory location, uint256 registrationTime, bool isActive, uint256 totalCertificatesIssued){
+        require(isRegistered[_issuerAddress], "IssuerRegistry: Address not registered");
+        Issuer memory issuer = issuers[_issuerAddress];
+        return (
+            issuer.name,
+            issuer.location,
+            issuer.registrationTime,
+            issuer.isActive,
+            issuer.totalCertificatesIssued
+        );
+    }
+
+    // function getIssuerName(){}
+
+    function getTotalIssuers() external view returns (uint256){
+        return totalIssuers;
+    }
+
+    // function getAllIssuers(){}
+
+    // function getActivateIssuers(){}
+
+    function getContractStats() external view returns (uint256 totalRegistered, uint256 totalActive, uint256 totalCertificates){
+        totalRegistered = totalIssuers;
+        uint256 activeCount = 0;
+        uint256 certificatesCount = 0;
+
+        for(uint256 i=0; i<issuerAddresses.length;i++){
+            address issuerAdd = issuerAddresses[i];
+            if(issuers[issuerAdd].isActive){
+                activeCount++;
+            }
+            certificatesCount += issuers[issuerAdd].totalCertificatesIssued;
+        }
+        totalActive = activeCount;
+        totalCertificates = certificatesCount;
+
+    }
 }
