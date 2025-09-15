@@ -127,7 +127,10 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
         );
     }
 
-    // function getIssuerName(){}
+    function getIssuerName(address _issuerAddress) external view validAddress(_issuerAddress) returns (string memory){
+        require(isRegistered[_issuerAddress],"IssuerRegistry: Issuer not registered");
+        return issuers[_issuerAddress].name;
+    }
 
     function getTotalIssuers() external view returns (uint256){
         return totalIssuers;
