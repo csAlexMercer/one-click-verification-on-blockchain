@@ -136,7 +136,7 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
         return totalIssuers;
     }
 
-    // function getAllIssuers(){}
+    function getAllIssuers(uint256 _start, uint256 _limit)external view returns (address[] memory addresses, book h){}
 
     // function getActivateIssuers(){}
 
