@@ -69,7 +69,7 @@ def register_sample_issuers():
     print_section("Registration Summary")
     print(f"Total Institutions Processed: {len(institutions)}")
     print(f"Successfully Registered: {registered_count}")
-    print(f"Total Gas Used: {total_gas_used:.}")
+    print(f"Total Gas Used: {total_gas_used:,}")
     print(f"Average Gas Per Registration: {total_gas_used / max(registered_count, 1):,}")
     print_section("Contract State Verification")
     total_issuers = issuer_registry.getTotalIssuers()

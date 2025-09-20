@@ -2,6 +2,10 @@ from brownie import accounts, network, config, Wei
 import hashlib
 from datetime import datetime
 import json
+import pathlib
+
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
+DEPLOYMENTS_DIR = PROJECT_ROOT / "deployments"
 
 def get_account(index = 0):
     if network.show_active() == "development":
@@ -68,17 +72,20 @@ def save_deployment_info(contract_name, contract_address, network_name):
         "deployed_at": datetime.now().isoformat(),
         "deployer": get_account().address
     }
-    filename = f"deployments/{network_name}_{contract_name.lower()}.json"
+    DEPLOYMENTS_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{network_name}_{contract_name.lower()}.json"
+    filepath = DEPLOYMENTS_DIR / filename
 
-    with open(filename, 'w') as f:
+    with open(filepath, 'w') as f:
         json.dump(deployment_info, f, indent=2)
     
     print(f"Deployment info saved")
 
 def load_deployment_info(contract_name, network_name):
-    filename = f"deployments/{network_name}_{contract_name.lower()}"
+    filename = f"{network_name}_{contract_name.lower()}.json"
+    filepath = DEPLOYMENTS_DIR / filename
     try:
-        with open(filename, 'r') as f:
+        with open(filepath, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
         print(f"No deployment info found for {contract_name}_{contract_name.lower()}")

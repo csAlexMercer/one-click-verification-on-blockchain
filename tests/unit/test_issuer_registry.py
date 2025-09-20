@@ -1,10 +1,10 @@
 import pytest
-from brownie import issuerRegistry, accounts, reverts, ZERO_ADDRESS
+from brownie import IssuerRegistry, accounts, reverts, ZERO_ADDRESS
 from scripts.help_scripts import create_sample_institution_data
 
 @pytest.fixture
 def issuer_registry():
-    return accounts[0].deploy(issuerRegistry)
+    return accounts[0].deploy(IssuerRegistry)
 
 @pytest.fixture
 def sample_institutions():
@@ -37,7 +37,7 @@ def test_register_issuer_success(issuer_registry):
     tx = issuer_registry.registerIssuer(issuer_address, name, location, {'from': accounts[0]})
     assert len(tx.events["IssuerRegistered"]) == 1
     event = tx.events["IssuerRegistered"][0]
-    assert event["IssuerAddress"] == issuer_address
+    assert event["issuerAddress"] == issuer_address
     assert event["name"] == name
     assert event["location"] == location
 
@@ -72,7 +72,7 @@ def test_register_issuer_empty_name(issuer_registry):
 def test_register_duplicte_issuer(issuer_registry):
     issuer_registry.registerIssuer(accounts[1], "Test Uni", "Test City", {'from': accounts[0]})
 
-    with reverts("IssuerRegistry: Issuer already registered"):
+    with reverts("IssuerRegistry: Issuer already registered."):
         issuer_registry.registerIssuer(accounts[1], "Another Name", "Another City", {'from': accounts[0]})
 
 def test_update_issuer_success(registered_issuer_registry, sample_institutions):
@@ -83,7 +83,7 @@ def test_update_issuer_success(registered_issuer_registry, sample_institutions):
 
     assert len(tx.events["IssuerUpdated"]) == 1
     event = tx.events["IssuerUpdated"][0]
-    assert event["issuerAddress"] == issuer_address
+    assert event["IssuerAddress"] == issuer_address
     assert event["name"] == new_name
     assert event["location"] == new_location
 
@@ -92,7 +92,7 @@ def test_update_issuer_success(registered_issuer_registry, sample_institutions):
     assert info[1] == new_location
 
 def test_update_nonexistent_issuer(issuer_registry):
-    with reverts("IssuerRegistry: Issuer not registered"):
+    with reverts("IssuerRegistry: Issuer not registered."):
         issuer_registry.updateIssuer(accounts[5], "New Name", "New Location", {'from': accounts[0]})
 
 def test_update_issuer_only_owner(registered_issuer_registry, sample_institutions):
@@ -120,7 +120,7 @@ def test_reactivate_issuer_success(registered_issuer_registry, sample_institutio
     tx = registered_issuer_registry.reactivateIssuer(issuer_address, {'from': accounts[0]})
 
     assert len(tx.events["IssuerReactivated"]) == 1
-    assert tx.events["IssuerReactivated"][0]["IssuerAddress"] == issuer_address
+    assert tx.events["IssuerReactivated"][0]["issuerAddress"] == issuer_address
 
     assert registered_issuer_registry.isRegisteredIssuer(issuer_address) == True
     info = registered_issuer_registry.getIssuerInfo(issuer_address)
@@ -129,12 +129,12 @@ def test_reactivate_issuer_success(registered_issuer_registry, sample_institutio
 def test_deactivated_already_inactive(registered_issuer_registry, sample_institutions):
     issuer_address = sample_institutions[0]["address"]
     registered_issuer_registry.deactivateIssuer(issuer_address, {'from': accounts[0]})
-    with reverts("IssuerRegistry: Issuer already inactive"):
+    with reverts("IssuerRegistry: Issuer is already inactive."):
         registered_issuer_registry.deactivateIssuer(issuer_address, {'from': accounts[0]})
 
 def test_reactivate_already_active(registered_issuer_registry, sample_institutions):
     issuer_address = sample_institutions[0]["address"]
-    with reverts("IssuerRegistry: Issuer already active"):
+    with reverts("IssuerRegistry: Issuer is already active"):
         registered_issuer_registry.reactivateIssuer(issuer_address, {'from': accounts[0]})
 
 def test_increment_certificate_count(registered_issuer_registry, sample_institutions):
@@ -191,7 +191,7 @@ def test_get_contract_stats_comprehensive(registered_issuer_registry, sample_ins
     registered_issuer_registry.incrementCertificateCount(sample_institutions[0]["address"], {'from': accounts[0]})
     registered_issuer_registry.incrementCertificateCount(sample_institutions[1]["address"],{'from':accounts[0]})
     registered_issuer_registry.deactivateIssuer(sample_institutions[2]["address"], {'from': accounts[0]})
-    stats = registered_issuer_registry.getCountractStats()
+    stats = registered_issuer_registry.getContractStats()
     assert stats[0] == 3
     assert stats[1] == 2
     assert stats[2] == 3

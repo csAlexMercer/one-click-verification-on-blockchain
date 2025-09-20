@@ -83,7 +83,7 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
     function deactivateIssuer(address _issuerAddress)
         external onlyOwner validAddress(_issuerAddress) nonReentrant{
         require(isRegistered[_issuerAddress], "IssuerRegistry: Issuer not registered.");
-        require(issuers[_issuerAddress].isActive, "IssuerRegistry: Issuer is already deactivated");
+        require(issuers[_issuerAddress].isActive, "IssuerRegistry: Issuer is already inactive.");
 
         issuers[_issuerAddress].isActive = false;
         emit IssuerDeactivated(_issuerAddress, block.timestamp);
@@ -93,7 +93,7 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
     function reactivateIssuer(address _issuerAddress)
         external onlyOwner validAddress(_issuerAddress) nonReentrant{
         require(isRegistered[_issuerAddress], "IssuerRegistry: Issuer not registered.");
-        require(!issuers[_issuerAddress].isActive, "IssuerRegistry: Issuer is already activated");
+        require(!issuers[_issuerAddress].isActive, "IssuerRegistry: Issuer is already active");
 
         issuers[_issuerAddress].isActive = true;
         emit IssuerReactivated(_issuerAddress, block.timestamp);
@@ -136,9 +136,20 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
         return totalIssuers;
     }
 
-    function getAllIssuers(uint256 _start, uint256 _limit)external view returns (address[] memory addresses, book h){}
+    function getAllIssuers(uint256 _start, uint256 _limit)external view returns (address[] memory addresses, bool hasMore){
+        require(_limit >0, "IssuerRegistry: Limit must be greater than 0");
+        require(_start < issuerAddresses.length, "IssuerRegistry: Start index out of bounds");
+        uint256 end = _start + _limit;
+        if(end>issuerAddresses.length){
+            end = issuerAddresses.length;
+        }
+        addresses = new address[](end - _start);
+        for(uint256 i = _start;i<end;i++){
+            addresses[i - _start] = issuerAddresses[i];
+        }
+        hasMore = end < issuerAddresses.length;
+    }
 
-    // function getActivateIssuers(){}
 
     function getContractStats() external view returns (uint256 totalRegistered, uint256 totalActive, uint256 totalCertificates){
         totalRegistered = totalIssuers;
