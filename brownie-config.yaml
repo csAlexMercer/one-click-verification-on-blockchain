@@ -9,7 +9,7 @@ compiler:
 
 networks:
   development:
-    host: http://127.0.0.1:8545
+    host: http://127.0.0.0:8545
     gas_limit: 12000000
     gas_price: 20000000000
     chainid: 1337
