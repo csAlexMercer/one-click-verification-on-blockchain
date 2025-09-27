@@ -150,6 +150,41 @@ contract IssuerRegistry is Ownable, ReentrancyGuard{
         hasMore = end < issuerAddresses.length;
     }
 
+    function getActiveIssuers(uint256 _start, uint256 _limit) external view returns (address[] memory addresses, string[] memory names, bool hasMore){
+        require(_limit > 0, "IssuerRegistry: Limit must be greater than 0");
+
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < issuerAddresses.length; i++) {
+            if (issuers[issuerAddresses[i]].isActive) {
+                activeCount++;
+            }
+        }
+        require(_start < activeCount, "IssuerRegistry: Start index out of bounds");
+
+        uint256 end = _start + _limit;
+        if (end > activeCount) {
+            end = activeCount;
+        }
+
+        addresses = new address[](end - _start);
+        names = new string[](end - _start);
+
+        uint256 activeIndex = 0;
+        uint256 resultIndex = 0;
+
+        for (uint256 i = 0; i < issuerAddresses.length && resultIndex < (end - _start); i++) {
+            if (issuers[issuerAddresses[i]].isActive) {
+                if (activeIndex >= _start) {
+                    addresses[resultIndex] = issuerAddresses[i];
+                    names[resultIndex] = issuers[issuerAddresses[i]].name;
+                    resultIndex++;
+                }
+                activeIndex++;
+            }
+        }
+
+        hasMore = end < activeCount;
+    }
 
     function getContractStats() external view returns (uint256 totalRegistered, uint256 totalActive, uint256 totalCertificates){
         totalRegistered = totalIssuers;
