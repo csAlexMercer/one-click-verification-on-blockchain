@@ -68,7 +68,7 @@ def demo_admin_operations():
             event = tx.events["IssuerUpdated"][0]
             print(f"\n Event Emitted:")
             print(f" Event: IssuerUpdated")
-            print(f" Issuer: {format_address(event['issuerAddress'])}")
+            print(f" Issuer: {format_address(event['IssuerAddress'])}")
             print(f" New Name: {event['name']}")
             print(f" Timestamp: {time.ctime(event['timestamp'])}")
         
@@ -99,12 +99,66 @@ def demo_admin_operations():
                 event = tx.events["IssuerDeactivated"][0]
                 print(f"\n Event Emitted:")
                 print(f" Event: IssuerDeactivated")
-                print(f" Issuer: {format_address(event['IssuerAddress'])}")
+                print(f" Issuer: {format_address(event['issuerAddress'])}")
                 print(f" Timestamp: {time.ctime(event['timestamp'])}")
 
         except Exception as e:
             print(f" Deactivation failed: {e}")
     else:
         print(f"Issuer is Already Inactive!!")
-                    
+    
+    print_section("3. Issuer Reactivation")
+    is_active = issuer_registry.isRegisteredIssuer(demo_issuer_address)
+    if not is_active:
+        print("Reactivating issuer..")
+        try:
+            tx = issuer_registry.reactivateIssuer(demo_issuer_address, {'from': owner})
+            tx.wait(1)
+            print(f"Reactivation successful")
+            print(f"Transaction Hash: {tx.txid}")
+            print(f"Gas Used: {tx.gas_used:,}")
 
+            is_active_after = issuer_registry.isRegisteredIssuer(demo_issuer_address)
+            print(f"\n Status Check:")
+            print(f" Is Registered & Active: {'Yes' if is_active_after else 'No'}")
+
+            if "IssuerReactivated" in tx.events:
+                event = tx.events["IssuerReactivated"][0]
+                print(f"\n Event Emitted:")
+                print(f"  Event: IssuerReactivated")
+                print(f"  Issuer: {format_address(event['issuerAddress'])}")
+                print(f"  Timestamp: {time.ctime(event['timestamp'])}")
+        except Exception as e:
+            print(f"Reactivation failed: {e}")
+    else:
+        print("Issuer is already active")
+
+    print_section("4. Certificate Count Management")                    
+    info = issuer_registry.getIssuerInfo(demo_issuer_address)
+    current_count = info[4]
+    print(f"Simulating certificate issuance..")
+
+    try:
+        for i in range(3):
+            tx = issuer_registry.incrementCertificateCount(demo_issuer_address, {'from': owner})
+            tx.wait(1)
+            new_count = current_count +i +1
+            print(f" Certificate {i+1}: Count updated to {new_count}")
+
+            if "CertificateCountUpdated" in tx.events:
+                event = tx.events["CertificateCountUpdated"][0]
+                print(f" Event: CertificateCountUpdated, New Count: {event['newCount']}")
+        
+        final_info = issuer_registry.getIssuerInfo(demo_issuer_address)
+        final_count =  final_info[4]
+        print(f"\n Final Certificate Count: {final_count}")
+    except Exception as e:
+        print(f"Certificate count update failed: {e}")
+
+
+    return issuer_registry
+def main():
+    return demo_admin_operations()
+
+if __name__ == "__main__":
+    main()
