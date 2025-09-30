@@ -1,7 +1,7 @@
 {
   "contract_name": "IssuerRegistry",
-  "address": "0x3889b1327Ae10ce4C861eCb9605cc2485F8E5847",
+  "address": "0xfD04e9570422a7302e06a33667bfC115d6957a59",
   "network": "development",
-  "deployed_at": "2025-09-29T22:58:01.476509",
-  "deployer": "0xfBD50a27810bf8422AE3356007020E95c22565B2"
+  "deployed_at": "2025-10-01T00:20:09.281976",
+  "deployer": "0x0efD5caF2BF0d996Df9c46C6E8D3E7B0AaD440B8"
 }

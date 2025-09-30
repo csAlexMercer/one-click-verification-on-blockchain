@@ -11,11 +11,11 @@ interface IIssuerRegistry{
 
 }
 
-contract CertificateStore is ReenrancyGuard{
+contract CertificateStore is ReentrancyGuard{
     using Counters for Counters.Counter;
 
     struct Certificate {
-        byte32 certificateHash;
+        bytes32 certificateHash;
         address issuer;
         address recipient;
         uint256 issuanceTime;
@@ -26,24 +26,24 @@ contract CertificateStore is ReenrancyGuard{
     IIssuerRegistry public issuerRegistry;
     Counters.Counter private certificateCounter;
 
-    mapping(byte32 => Certificate) private certificates;
-    mapping(bute32 => bool) private certificatExists;
-    mapping(address => byte32[]) private recipientCertificates;
-    mapping(address => byte32[]) private issuerCertificates;
-    mapping(address => mapping(byte32 => uint256)) private recipientCertificateIndex;
+    mapping(bytes32 => Certificate) private certificates;
+    mapping(bytes32 => bool) private certificateExists;
+    mapping(address => bytes32[]) private recipientCertificates;
+    mapping(address => bytes32[]) private issuerCertificates;
+    mapping(address => mapping(bytes32 => uint256)) private recipientCertificateIndex;
 
     event CertificateIssued(
-        byte32 indexed certificateHash,
+        bytes32 indexed certificateHash,
         address indexed issuer,
         address indexed recipient,
         uint256 timestamp
     );
 
     event CertificateRevoked(
-        byte32 indexed certificateHash,
+        bytes32 indexed certificateHash,
         address indexed issuer,
-        uint256 timestamp,
-    )
+        uint256 timestamp
+    );
 
     event BatchCertificatesIssued(
         address indexed issuer,
@@ -52,23 +52,24 @@ contract CertificateStore is ReenrancyGuard{
     );
 
     modifier onlyRegisteredIssuer(){
-        require(issuer.isRegisteredIssuer(msg.sender),
+        require(issuerRegistry.isRegisteredIssuer(msg.sender),
         "CertificateStore: Caller is not registered");
         _;
     }
 
-    modifier certificateMustExist(byte32 _certificateHash){
+    modifier certificateMustExist(bytes32 _certificateHash){
         require(certificateExists[_certificateHash],
         "CertificateStore: Certificate does not exist");
         _;
     }
 
-    modifier certificateMustNotExist(byte32 _certificateHash){
+    modifier certificateMustNotExist(bytes32 _certificateHash){
         require(!certificateExists[_certificateHash],
-        "CertificateStore: Certificate already exists")
+        "CertificateStore: Certificate already exists");
+        _;
     }
 
-    modifier onlyIssuerOfCertificate(byte32 _certificateHash){
+    modifier onlyIssuerOfCertificate(bytes32 _certificateHash){
         require(certificates[_certificateHash].issuer == msg.sender,
         "CertificateStore: Caller is not the issuer of this certificate");
         _;
@@ -79,8 +80,8 @@ contract CertificateStore is ReenrancyGuard{
         _;
     }
 
-    modifier validHash(byte32 _hash){
-        require(_hash != byte32(0), "CertificateStore: Invalid hash");
+    modifier validHash(bytes32 _hash){
+        require(_hash != bytes32(0), "CertificateStore: Invalid hash");
         _;
     }
 
@@ -90,7 +91,7 @@ contract CertificateStore is ReenrancyGuard{
         issuerRegistry = IIssuerRegistry(_issuerRegistryAddress);
     }
 
-    function issueCertificate(byte32 _certificateHash, address _recipientAddress)
+    function issueCertificate(bytes32 _certificateHash, address _recipientAddress)
         external
         onlyRegisteredIssuer
         validHash(_certificateHash)
@@ -104,7 +105,7 @@ contract CertificateStore is ReenrancyGuard{
             recipient: _recipientAddress,
             issuanceTime: block.timestamp,
             isRevoked: false,
-            revocationTime: 0,
+            revocationTime: 0
         });
 
         certificateExists[_certificateHash] = true;
@@ -124,14 +125,14 @@ contract CertificateStore is ReenrancyGuard{
         nonReentrant{
         
         require(_certificateHashes.length == _recipientAddresses.length, "CertificateStore: Array length mismatch");
-        require(_CertificateHashes.length >0, "CertificateStore: Empty arrays");
+        require(_certificateHashes.length >0, "CertificateStore: Empty arrays");
         require(_certificateHashes.length <= 100, "CertificateStore: Batch too large (max 100)");
 
         for(uint256 i = 0;i < _certificateHashes.length; i++){
-            byte32 certHash = _certificateHashes[i];
+            bytes32 certHash = _certificateHashes[i];
             address recipient = _recipientAddresses[i];
 
-            require(certHash != byte32(0), "CertificateStore: Invalid hash in batch");
+            require(certHash != bytes32(0), "CertificateStore: Invalid hash in batch");
             require(recipient != address(0), "CertificateStore: Invalid address in batch");
             require(!certificateExists[certHash],"CertificateStore: Duplicate certification in batch");
 
@@ -141,7 +142,7 @@ contract CertificateStore is ReenrancyGuard{
                 recipient: recipient,
                 issuanceTime: block.timestamp,
                 isRevoked: false,
-                revocationTime: 0,
+                revocationTime: 0
             });
             certificateExists[certHash] = true;
             recipientCertificates[recipient].push(certHash);
@@ -159,7 +160,7 @@ contract CertificateStore is ReenrancyGuard{
 
     }
 
-    function verifyCertificate(byte32 _certificateHash)
+    function verifyCertificate(bytes32 _certificateHash)
         external
         view
         validHash(_certificateHash)
@@ -179,7 +180,7 @@ contract CertificateStore is ReenrancyGuard{
         return(true, cert.issuer, cert.recipient, cert.issuanceTime, cert.isRevoked, name);
     }
 
-    function isCertificateValid(byte32 _certificateHash)
+    function isCertificateValid(bytes32 _certificateHash)
         external
         view
         returns (bool){
@@ -187,22 +188,79 @@ contract CertificateStore is ReenrancyGuard{
         if(!certificateExists[_certificateHash]){
             return false;
         }
-        return !certificate[_certificateHash].isRevoked;
+        return !certificates[_certificateHash].isRevoked;
     }
 
-    function revokeCertificate(byte32 _certificateHash, string calldata _reason)
+    function revokeCertificate(bytes32 _certificateHash, string calldata _reason)
         external
         onlyRegisteredIssuer
         certificateMustExist(_certificateHash)
-        onlyIssuerOfCertificate(_CertificateHash)
+        onlyIssuerOfCertificate(_certificateHash)
         nonReentrant{
 
         Certificate storage cert = certificates[_certificateHash];
         require(!cert.isRevoked, "CertificateStore: Certificate already revoked");
         cert.isRevoked = true;
         cert.revocationTime = block.timestamp;
-        cert.revocationTime = _reason;
 
         emit CertificateRevoked(_certificateHash, msg.sender, block.timestamp);
+    }
+
+    function getCertificateDetails(bytes32 _certificateHash)
+        external
+        view
+        certificateMustExist(_certificateHash)
+        returns (
+            bytes32 certificateHash,
+            address issuer,
+            address recipient,
+            uint256 issuanceTime,
+            bool isRevoked,
+            uint256 revocationTime
+        ){
+        
+        Certificate memory cert = certificates[_certificateHash];
+        return (
+            cert.certificateHash,
+            cert.issuer,
+            cert.recipient,
+            cert.issuanceTime,
+            cert.isRevoked,
+            cert.revocationTime
+        );
+    }
+
+    function getCertificatesForRecipient(address _recipientAddress, uint256 _start, uint256 _limit)
+    external
+    view
+    validAddress(_recipientAddress)
+    returns (bytes32[] memory hashes, bool hasMore) {
+        bytes32[] storage recipientCerts = recipientCertificates[_recipientAddress];
+        require(_start < recipientCerts.length || recipientCerts.length == 0, "CertifiateStore: Start index out of bounds");
+        uint256 end = _start + _limit;
+        if(end > recipientCerts.length){
+            end = recipientCerts.length;
+        }
+
+        hashes = new bytes32[](end - _start);
+        for(uint256 i = _start; i < end; i++){
+            hashes[i - _start] = recipientCerts[i];
+        }
+        hasMore = end < recipientCerts.length;
+    }
+
+    // function getCertificatesIssuedBy(){}
+
+    function getTotalCertificates() external view returns (uint256){
+        return certificateCounter.current();
+    }
+
+    // function getRecipientCertificateCount(){}
+
+    function getContractStats() external view returns(
+        uint256 totalCertificates, uint256 totalRevoked
+    ){
+        totalCertificates = certificateCounter.current();
+        totalRevoked = 0;
     }
 }
