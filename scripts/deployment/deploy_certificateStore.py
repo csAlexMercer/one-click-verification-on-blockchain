@@ -5,10 +5,10 @@ def deploy_certificateStore():
     print("DEPLOYING CERTIFICATE STORE")
     account = get_account()
 
-    print_section("Deployment Account")
-    print(f"Deploying from: {account.address}")
-    print(f"Balance: {account.balance()/1e18:.4f} ETH")
-    print_section("IssuerRegistry Integration")
+    # print_section("Deployment Account")
+    # print(f"Deploying from: {account.address}")
+    # print(f"Balance: {account.balance()/1e18:.4f} ETH")
+    # print_section("IssuerRegistry Integration")
     deployment_info = load_deployment_info("IssuerRegistry", network.show_active())
     
     if not deployment_info:
@@ -24,7 +24,7 @@ def deploy_certificateStore():
         print(f"Error accessing IssuerRegistry: {e}")
         return None
     
-    print_section("Contract Deployment")
+    # print_section("Contract Deployment")
     print(f"Deploying CertificateStore..")
     try: 
         certificate_store = CertificateStore.deploy(issuer_registry_address, {'from': account})
@@ -38,13 +38,13 @@ def deploy_certificateStore():
         print(f"Connected IssuerRegistry: {connected_registry}")
         print(f"Address Match: {'Success' if connected_registry == issuer_registry_address else 'Failed'}")
 
-        total_certificates = certificate_store.getTotalCertificates()
-        print(f"Initial Certificate Count: {total_certificates}")
+        # total_certificates = certificate_store.getTotalCertificates()
+        # print(f"Initial Certificate Count: {total_certificates}")
 
-        stats = certificate_store.getContractStats()
-        print(f"Contract Stats:")
-        print(f"  -Total Certificates: {stats[0]}")
-        print(f"  -Total Revoked: {stats[1]}")
+        # stats = certificate_store.getContractStats()
+        # print(f"Contract Stats:")
+        # print(f"  -Total Certificates: {stats[0]}")
+        # print(f"  -Total Revoked: {stats[1]}")
 
         print_section("Integration Test")
         if total_issuers>0:
@@ -61,11 +61,11 @@ def deploy_certificateStore():
             network.show_active()
         )
 
-        print_section("Deployment Complete")
-        print(f" Contract: CertificateStore")
-        print(f" Address: {certificate_store.address}")
-        print(f" IssuerRegistry: {issuer_registry_address}")
-        print(f" Network: {network.show_active()}")
+        # print_section("Deployment Complete")
+        # print(f" Contract: CertificateStore")
+        # print(f" Address: {certificate_store.address}")
+        # print(f" IssuerRegistry: {issuer_registry_address}")
+        # print(f" Network: {network.show_active()}")
 
         return certificate_store
     except Exception as e:

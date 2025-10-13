@@ -1,7 +1,7 @@
 {
   "contract_name": "CertificateStore",
-  "address": "0x4193D080B5322fB311FdAc64594C2F8E59Af75Ab",
+  "address": "0x67Cb13ccAa7877E725ad088Dd27025D1CC50cBD2",
   "network": "development",
-  "deployed_at": "2025-10-02T17:38:46.526084",
-  "deployer": "0x6ac2CcA7bF3ddcE2130F2b51cfED56a57F74b6e9"
+  "deployed_at": "2025-10-13T13:53:28.767060",
+  "deployer": "0xBe2c8dA644927704A7018F69dE20B3641e071AD4"
 }

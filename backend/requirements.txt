@@ -1,0 +1,40 @@
+# Flask Framework
+Flask==2.3.0
+Flask-RESTX==1.1.0
+Flask-CORS==4.0.0
+Flask-JWT-Extended==4.5.2
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.4
+
+# File Processing
+PyPDF2==3.0.1
+Pillow==10.0.0
+python-magic==0.4.27
+hashlib-additional==1.0.0
+
+# Database
+psycopg2-binary==2.9.7  # PostgreSQL
+
+# Authentication and Security
+PyJWT==2.8.0
+bcrypt==4.0.1
+cryptography==41.0.4
+
+# Task Queue (for async operations)
+celery==5.3.4
+redis==5.0.0
+
+# Monitoring and Logging
+python-json-logger==2.0.7
+sentry-sdk[flask]==1.32.0
+
+# Environment
+python-decouple==3.8
+
+# Production Server
+gunicorn==21.2.0
+gevent==23.9.1
+
+pytest-flask==1.2.0
+pytest-cov==4.1.0
+faker==19.6.2

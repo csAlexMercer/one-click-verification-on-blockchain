@@ -9,7 +9,7 @@ def register_sample_issuers():
         return None
     
     contract_address = deployment_info["address"]
-    print_section("Contract Information")
+    print("Contract Information")
     print(f"IssuerRegistry Address: {contract_address}")
     issuer_registry = IssuerRegistry.at(contract_address)
     owner = get_account()
@@ -81,21 +81,21 @@ def register_sample_issuers():
     print(f" - Total Active: {stats[1]}")
     print(f" - Total Certificate: {stats[2]}")
 
-    if total_issuers > 0:
-        print_section("Registered Issuers")
-        addresses, has_more = issuer_registry.getAllIssuers(0,10)
-        for i, addr in enumerate(addresses, 1):
-            try:
-                info = issuer_registry.getIssuerInfo(addr)
-                status = "Active" if info[3] else "Inactive"
-                print(f"{i}. {info[0]} ({status})")
-                print(f" Location: {info[1]}")
-                print(f" Address: {addr}")
-                print(f" Registered: {time.ctime(info[2])}")
-                print(f" Certificates Issued: {info[4]}")
-                print()
-            except Exception as e:
-                print(f"Error getting info for {addr}: {e}")
+    # if total_issuers > 0:
+    #     print_section("Registered Issuers")
+    #     addresses, has_more = issuer_registry.getAllIssuers(0,10)
+    #     for i, addr in enumerate(addresses, 1):
+    #         try:
+    #             info = issuer_registry.getIssuerInfo(addr)
+    #             status = "Active" if info[3] else "Inactive"
+    #             print(f"{i}. {info[0]} ({status})")
+    #             print(f" Location: {info[1]}")
+    #             print(f" Address: {addr}")
+    #             print(f" Registered: {time.ctime(info[2])}")
+    #             print(f" Certificates Issued: {info[4]}")
+    #             print()
+    #         except Exception as e:
+    #             print(f"Error getting info for {addr}: {e}")
     return issuer_registry
 
 def main():

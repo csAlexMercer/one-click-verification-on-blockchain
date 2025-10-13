@@ -191,7 +191,7 @@ contract CertificateStore is ReentrancyGuard{
         return !certificates[_certificateHash].isRevoked;
     }
 
-    function revokeCertificate(bytes32 _certificateHash, string calldata _reason)
+    function revokeCertificate(bytes32 _certificateHash)
         external
         onlyRegisteredIssuer
         certificateMustExist(_certificateHash)
