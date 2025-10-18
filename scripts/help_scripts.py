@@ -92,7 +92,7 @@ def load_deployment_info(contract_name, network_name):
         return None
 
 def print_section(title):
-    print(f"\n📋 {title}")
+    print(f"\n {title}")
     print("-" * 40)
 
 
