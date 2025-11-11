@@ -44,7 +44,10 @@ class BlockchainService:
             issuer_abi = json.load(f)['abi']
         with open(build_dir / 'CertificateStore.json', 'r') as f:
             cert_abi = json.load(f)['abi']
-        
+
+        self.issuer_registry = self.w3.eth.contract(
+            address=Web3.to_checksum_address(issuer_address), abi=issuer_abi
+        )
         self.certificate_store = self.w3.eth.contract(
             address=Web3.to_checksum_address(cert_address), abi=cert_abi
         )
@@ -122,7 +125,7 @@ class BlockchainService:
             certificates = []
             for cert_hash in hashes:
                 verification = self.verify_certificate(cert_hash)
-                certificates.appent({
+                certificates.append({
                     'hash': '0x' + cert_hash.hex(),
                     'issuer_name': verification['issuer_name'],
                     'issuancee_time': verification['issuance_time'],

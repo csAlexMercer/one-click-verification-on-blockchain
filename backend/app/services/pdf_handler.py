@@ -25,7 +25,7 @@ class PDFHandler:
             return False, "File is empty"
         
         try:
-            pdf = pyPDF2.PDFReader(file)
+            pdf = PyPDF2.PdfReader(file)
             if len(pdf.pages) == 0:
                 return False, "PDF has no pages"
             file.seek(0)
@@ -35,7 +35,7 @@ class PDFHandler:
         return True, ""
     
     @staticmethod
-    def calculate_hash(File: FileStorage) -> str:
+    def calculate_hash(file: FileStorage) -> str:
         try:
             content = file.read()
             file.seek(0)

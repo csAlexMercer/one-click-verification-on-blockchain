@@ -18,7 +18,7 @@ def register_issuer():
                 'success': False,
                 'message': 'Missing required fields'
             }), 400
-        blockchain = get_blockchain_service
+        blockchain = get_blockchain_service()
         if blockchain.is_registered_issuer(issuer_address):
             return jsonify({
                 'success': False,

@@ -17,7 +17,7 @@ class Config:
     CERTIFICATE_STORE_ADDRESS = os.getenv('CERTIFICATE_STORE_ADDRESS', '')
 
     DEPLOYER_ADDRESS = os.getenv('DEPLOYER_ADDRESS','')
-    DEPLOYER_PRIVATE_KEY = os.getenv('CERTIFICATE_STORE_ADDRESS', '')
+    DEPLOYER_PRIVATE_KEY = os.getenv('DEPLOYER_PRIVATE_KEY', '')
 
 def get_config():
     return Config
