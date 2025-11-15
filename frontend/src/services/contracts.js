@@ -1,12 +1,13 @@
-import {getWeb3} from './web3';
+import Web3Service from './web3';
 import IssuerRegistryABI from '../contracts/IssuerRegistry.json';
 import CertificateStoreABI from '../contracts/CertificateStore.json';
 
 const ISSUER_REGISTRY_ADDRESS = '0xB4A5aCE43572F24Fe2270A7927D5cd26b9621adE';
 const CERTIFICATE_STORE_ADDRESS = '0xD626C4CD890580eB35A4C2008F249E5098bEC4F8';
+const DEPLOYER_ADDRESS = process.env.REACT_APP_DEPLOYER_ADDRESS;
 
 export const getIssuerRegistryContract = () => {
-    const web3 = getWeb3();
+    const web3 = Web3Service();
     return new web3.eth.Contract(
         IssuerRegistryABI.abi,
         ISSUER_REGISTRY_ADDRESS
@@ -14,7 +15,7 @@ export const getIssuerRegistryContract = () => {
 };
 
 export const getCertificateStoreContract = () => {
-    const web3 = getWeb3();
+    const web3 = Web3Service();
     return new web3.eth.Contract(
         CertificateStoreABI.abi,
         CERTIFICATE_STORE_ADDRESS
@@ -80,6 +81,24 @@ export const getIssuerStats = async () => {
         return { totalIssuers: 0, activeIssuers: 0, totalCertificates: 0 };
     }
 };
+
+export const registerIssuer = async (issuerAddress, name, location) => {
+    try{
+        const contract = getIssuerRegistryContract();
+        const gasEstimate = await contract.methods.registerIssuer(
+            issuerAddress, name, location
+        ).estimateGas({from: DEPLOYER_ADDRESS});
+        const tx = await contract.methods.registerIssuer(issuerAddress, name, location)
+        .send({
+            from: DEPLOYER_ADDRESS,
+            gas: Math.floor(gasEstimate * 1.2)
+        });
+        return { success: true, tx}
+    }catch (error){
+        console.error('Error registering issuer', error);
+        throw error;
+    }
+}
 
 export const issueCertificate = async (certificateHash, recipientAddress, fromAddress) => {
     try {
