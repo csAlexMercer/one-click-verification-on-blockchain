@@ -15,8 +15,7 @@ const App = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [toasts, setToasts] = useState([]);
   
-  // Admin address from deployment info
-  const ADMIN_ADDRESS = '0x31CcD39D841f15462015982A366D00deA1c2Ec99'.toLowerCase();
+  const ADMIN_ADDRESS = (process.env.REACT_APP_ADMIN_ADDRESS || process.env.REACT_APP_DEPLOYER_ADDRESS || '').toLowerCase();
   
   const showToast = (message, type = 'info') => {
     const id = Date.now();
@@ -77,7 +76,7 @@ const App = () => {
       case 'register':
         return <RegisterPage showToast={showToast} />;
       case 'admin-dashboard':
-        return isAdmin ? <AdminDashboard showToast={showToast} /> : <HomePage setPage={setCurrentPage} />;
+        return isAdmin ? <AdminDashboard account={account} showToast={showToast} /> : <HomePage setPage={setCurrentPage} />;
       case 'issue':
         return <IssuePage account={account} showToast={showToast} />;
       case 'holder':

@@ -14,6 +14,14 @@ const api = {
     const res = await fetch(`${API_BASE}/issuer/pending`);
     return res.json();
   },
+
+  async approveIssuer(address) {
+    const res = await fetch(`${API_BASE}/issuer/approve/${address}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return res.json();
+  },
   
   async getActiveIssuers() {
     const res = await fetch(`${API_BASE}/issuer/active`);

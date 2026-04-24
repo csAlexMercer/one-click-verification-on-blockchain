@@ -2,10 +2,14 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from pathlib import Path
 import logging
-
-from app.config import get_config
+from dotenv import load_dotenv
 
 def create_app():
+    # Load backend/.env regardless of the current working directory.
+    load_dotenv(Path(__file__).resolve().parent.parent / '.env')
+
+    from app.config import get_config
+
     app = Flask(__name__)
     app.config.from_object(get_config())
     Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)

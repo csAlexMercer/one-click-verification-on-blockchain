@@ -26,19 +26,15 @@ class BlockchainService:
             logger.error(f"Blockchain initialization failed: {e}")
             raise
 
+    def _to_checksum_address(self, address: str, field_name: str) -> str:
+        if not address or not isinstance(address, str) or not Web3.is_address(address):
+            raise ValueError(f"Invalid or missing {field_name}")
+        return Web3.to_checksum_address(address)
+
     def _load_contracts(self):
-        deployment_dir = Path(current_app.root_path).parent.parent / 'deployments'
-        issuer_file = deployment_dir / 'development_issuerregistry.json'
-        cert_file = deployment_dir / 'development_certificatestore.json'
-        with open(issuer_file, 'r') as f:
-            issuer_data = json.load(f)
-            issuer_address = issuer_data['address']
-        
-        with open(cert_file, 'r') as f:
-            cert_data = json.load(f)
-            cert_address = cert_data['address']
-        
         build_dir = Path(current_app.root_path).parent.parent / 'build' / 'contracts'
+        issuer_address = current_app.config['ISSUER_REGISTRY_ADDRESS']
+        cert_address = current_app.config['CERTIFICATE_STORE_ADDRESS']
 
         with open(build_dir / 'IssuerRegistry.json', 'r') as f:
             issuer_abi = json.load(f)['abi']
@@ -46,10 +42,10 @@ class BlockchainService:
             cert_abi = json.load(f)['abi']
 
         self.issuer_registry = self.w3.eth.contract(
-            address=Web3.to_checksum_address(issuer_address), abi=issuer_abi
+            address=self._to_checksum_address(issuer_address, 'issuer registry contract address'), abi=issuer_abi
         )
         self.certificate_store = self.w3.eth.contract(
-            address=Web3.to_checksum_address(cert_address), abi=cert_abi
+            address=self._to_checksum_address(cert_address, 'certificate store contract address'), abi=cert_abi
         )
         logger.info("Contract loaded successfully")
     
@@ -57,16 +53,25 @@ class BlockchainService:
         try:
             deployer = current_app.config['DEPLOYER_ADDRESS']
             private_key = current_app.config['DEPLOYER_PRIVATE_KEY']
+            if not private_key:
+                raise ValueError('Missing DEPLOYER_PRIVATE_KEY in environment')
+
+            issuer_checksum = self._to_checksum_address(issuer_address, 'issuer_address')
+            deployer_checksum = self._to_checksum_address(deployer, 'DEPLOYER_ADDRESS')
+
             txn = self.issuer_registry.functions.registerIssuer(
-                Web3.to_checksum_address(issuer_address),name, location
+                issuer_checksum, name, location
             ).build_transaction({
-                'from': Web3.to_checksum_address(deployer),
-                'nonce': self.w3.eth.get_transaction_count(Web3.to_checksum_address(deployer)),
+                'from': deployer_checksum,
+                'nonce': self.w3.eth.get_transaction_count(deployer_checksum),
                 'gas': 500000,
                 'gasPrice': self.w3.eth.gas_price
             })
             signed = self.w3.eth.account.sign_transaction(txn, private_key)
-            tx_hash = self.w3.eth.send_raw_transaction(signed.rawTransaction)
+            raw_transaction = getattr(signed, 'rawTransaction', getattr(signed, 'raw_transaction', None))
+            if raw_transaction is None:
+                raise AttributeError('Signed transaction missing raw transaction payload')
+            tx_hash = self.w3.eth.send_raw_transaction(raw_transaction)
             receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
             return{
                 'success': receipt['status'] == 1,
@@ -118,17 +123,32 @@ class BlockchainService:
         except Exception as e:
             logger.error(f"Error verifying certificate: {e}")
             raise
+
+    def get_certificate_details(self, cert_hash: bytes) -> dict:
+        try:
+            details = self.certificate_store.functions.getCertificateDetails(cert_hash).call()
+            return {
+                'certificate_hash': details[0],
+                'issuer': details[1],
+                'recipient': details[2],
+                'issuance_time': details[3],
+                'is_revoked': details[4],
+                'revocation_time': details[5]
+            }
+        except Exception as e:
+            logger.error(f"Error getting certificate details: {e}")
+            raise
     
     def get_certificates_for_recipient(self, recipient_address: str) -> list:
         try:
-            hashes, _ = self.certificate_store.functions.getCertificateForRecipient(Web3.to_checksum_address(recipient_address), 0, 100).call()
+            hashes, _ = self.certificate_store.functions.getCertificatesForRecipient(Web3.to_checksum_address(recipient_address), 0, 100).call()
             certificates = []
             for cert_hash in hashes:
                 verification = self.verify_certificate(cert_hash)
                 certificates.append({
                     'hash': '0x' + cert_hash.hex(),
                     'issuer_name': verification['issuer_name'],
-                    'issuancee_time': verification['issuance_time'],
+                    'issuance_time': verification['issuance_time'],
                     'is_revoked': verification['is_revoked']
                 })
             return certificates

@@ -1,31 +1,49 @@
-import Web3Service from './web3';
+import Web3 from 'web3';
 import IssuerRegistryABI from '../contracts/IssuerRegistry.json';
 import CertificateStoreABI from '../contracts/CertificateStore.json';
 
-const ISSUER_REGISTRY_ADDRESS = '0xB4A5aCE43572F24Fe2270A7927D5cd26b9621adE';
-const CERTIFICATE_STORE_ADDRESS = '0xD626C4CD890580eB35A4C2008F249E5098bEC4F8';
+const ISSUER_REGISTRY_ADDRESS = process.env.REACT_APP_ISSUER_REGISTRY;
+const CERTIFICATE_STORE_ADDRESS = process.env.REACT_APP_CERTIFICATE_STORE;
 const DEPLOYER_ADDRESS = process.env.REACT_APP_DEPLOYER_ADDRESS;
 
+const requireAddress = (value, name) => {
+    if (!value) {
+        throw new Error(`Missing ${name} environment variable`);
+    }
+    return value;
+};
+
+const withGasBuffer = (gasEstimate, bufferPercent = 20) => {
+    // Keep this Number-based for compatibility with browsers/toolchains that don't expose BigInt.
+    const baseGas = Number(gasEstimate);
+    if (!Number.isFinite(baseGas) || baseGas <= 0) {
+        throw new Error(`Invalid gas estimate: ${gasEstimate}`);
+    }
+    return Math.ceil(baseGas * (1 + bufferPercent / 100)).toString();
+};
+
 export const getIssuerRegistryContract = () => {
-    const web3 = Web3Service();
+    const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
     return new web3.eth.Contract(
         IssuerRegistryABI.abi,
-        ISSUER_REGISTRY_ADDRESS
+        requireAddress(ISSUER_REGISTRY_ADDRESS, 'REACT_APP_ISSUER_REGISTRY')
     );
 };
 
 export const getCertificateStoreContract = () => {
-    const web3 = Web3Service();
+    const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
     return new web3.eth.Contract(
         CertificateStoreABI.abi,
-        CERTIFICATE_STORE_ADDRESS
+        requireAddress(CERTIFICATE_STORE_ADDRESS, 'REACT_APP_CERTIFICATE_STORE')
     );
 };
 
 export const isRegisteredIssuer = async (address) => {
     try {
+        const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
+        const checksumAddress = web3.utils.toChecksumAddress(address);
         const contract = getIssuerRegistryContract();
-        return await contract.methods.isRegisteredIssuer(address).call();
+        return await contract.methods.isRegisteredIssuer(checksumAddress).call();
     } catch (error) {
         console.error('Error checking issuer:', error);
         return false;
@@ -34,8 +52,10 @@ export const isRegisteredIssuer = async (address) => {
 
 export const getIssuerInfo = async (address) => {
     try {
+        const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
+        const checksumAddress = web3.utils.toChecksumAddress(address);
         const contract = getIssuerRegistryContract();
-        const info = await contract.methods.getIssuerInfo(address).call();
+        const info = await contract.methods.getIssuerInfo(checksumAddress).call();
         
         return {
         name: info[0],
@@ -84,14 +104,17 @@ export const getIssuerStats = async () => {
 
 export const registerIssuer = async (issuerAddress, name, location) => {
     try{
+        const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
+        const checksumIssuerAddress = web3.utils.toChecksumAddress(issuerAddress);
         const contract = getIssuerRegistryContract();
+        const deployerAddress = web3.utils.toChecksumAddress(requireAddress(DEPLOYER_ADDRESS, 'REACT_APP_DEPLOYER_ADDRESS'));
         const gasEstimate = await contract.methods.registerIssuer(
-            issuerAddress, name, location
-        ).estimateGas({from: DEPLOYER_ADDRESS});
-        const tx = await contract.methods.registerIssuer(issuerAddress, name, location)
+            checksumIssuerAddress, name, location
+        ).estimateGas({from: deployerAddress});
+        const tx = await contract.methods.registerIssuer(checksumIssuerAddress, name, location)
         .send({
-            from: DEPLOYER_ADDRESS,
-            gas: Math.floor(gasEstimate * 1.2)
+            from: deployerAddress,
+            gas: withGasBuffer(gasEstimate)
         });
         return { success: true, tx}
     }catch (error){
@@ -102,19 +125,26 @@ export const registerIssuer = async (issuerAddress, name, location) => {
 
 export const issueCertificate = async (certificateHash, recipientAddress, fromAddress) => {
     try {
+        const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
+        const checksumRecipient = web3.utils.toChecksumAddress(recipientAddress);
+        const checksumFrom = web3.utils.toChecksumAddress(fromAddress);
+        
+        // Ensure hash has 0x prefix for bytes32 validation
+        const hashWithPrefix = certificateHash.startsWith('0x') ? certificateHash : '0x' + certificateHash;
+        
         const contract = getCertificateStoreContract();
         
         // Estimate gas first
         const gasEstimate = await contract.methods
-        .issueCertificate(certificateHash, recipientAddress)
-        .estimateGas({ from: fromAddress });
+        .issueCertificate(hashWithPrefix, checksumRecipient)
+        .estimateGas({ from: checksumFrom });
         
         // Send transaction with MetaMask
         const tx = await contract.methods
-        .issueCertificate(certificateHash, recipientAddress)
+        .issueCertificate(hashWithPrefix, checksumRecipient)
         .send({ 
-            from: fromAddress,
-            gas: Math.floor(gasEstimate * 1.2) // Add 20% buffer
+            from: checksumFrom,
+            gas: withGasBuffer(gasEstimate)
         });
         
         return { success: true, tx };
@@ -126,8 +156,11 @@ export const issueCertificate = async (certificateHash, recipientAddress, fromAd
 
 export const verifyCertificate = async (certificateHash) => {
     try {
+        // Ensure hash has 0x prefix for bytes32 validation
+        const hashWithPrefix = certificateHash.startsWith('0x') ? certificateHash : '0x' + certificateHash;
+        
         const contract = getCertificateStoreContract();
-        const result = await contract.methods.verifyCertificate(certificateHash).call();
+        const result = await contract.methods.verifyCertificate(hashWithPrefix).call();
         
         return {
         isValid: result[0],
@@ -152,8 +185,11 @@ export const verifyCertificate = async (certificateHash) => {
 
 export const isCertificateValid = async (certificateHash) => {
     try {
+        // Ensure hash has 0x prefix for bytes32 validation
+        const hashWithPrefix = certificateHash.startsWith('0x') ? certificateHash : '0x' + certificateHash;
+        
         const contract = getCertificateStoreContract();
-        return await contract.methods.isCertificateValid(certificateHash).call();
+        return await contract.methods.isCertificateValid(hashWithPrefix).call();
     } catch (error) {
         console.error('Error checking certificate validity:', error);
         return false;
@@ -162,9 +198,11 @@ export const isCertificateValid = async (certificateHash) => {
 
 export const getCertificatesForRecipient = async (recipientAddress, start = 0, limit = 100) => {
     try {
+        const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
+        const checksumRecipient = web3.utils.toChecksumAddress(recipientAddress);
         const contract = getCertificateStoreContract();
         const result = await contract.methods
-        .getCertificatesForRecipient(recipientAddress, start, limit)
+        .getCertificatesForRecipient(checksumRecipient, start, limit)
         .call();
         
         return {
@@ -179,8 +217,11 @@ export const getCertificatesForRecipient = async (recipientAddress, start = 0, l
 
 export const getCertificateDetails = async (certificateHash) => {
     try {
+        // Ensure hash has 0x prefix for bytes32 validation
+        const hashWithPrefix = certificateHash.startsWith('0x') ? certificateHash : '0x' + certificateHash;
+        
         const contract = getCertificateStoreContract();
-        const details = await contract.methods.getCertificateDetails(certificateHash).call();
+        const details = await contract.methods.getCertificateDetails(hashWithPrefix).call();
         
         return {
         certificateHash: details[0],
@@ -223,17 +264,20 @@ export const getCertificateStats = async () => {
 
 export const revokeCertificate = async (certificateHash, fromAddress) => {
     try {
+        const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
+        const checksumFrom = web3.utils.toChecksumAddress(fromAddress);
+        const hashWithPrefix = certificateHash.startsWith('0x') ? certificateHash : '0x' + certificateHash;
         const contract = getCertificateStoreContract();
         
         const gasEstimate = await contract.methods
-        .revokeCertificate(certificateHash)
-        .estimateGas({ from: fromAddress });
+        .revokeCertificate(hashWithPrefix)
+        .estimateGas({ from: checksumFrom });
         
         const tx = await contract.methods
-        .revokeCertificate(certificateHash)
+        .revokeCertificate(hashWithPrefix)
         .send({
-            from: fromAddress,
-            gas: Math.floor(gasEstimate * 1.2),
+            from: checksumFrom,
+            gas: withGasBuffer(gasEstimate),
         });
         
         return { success: true, tx };
@@ -245,17 +289,21 @@ export const revokeCertificate = async (certificateHash, fromAddress) => {
 
 export const batchIssueCertificates = async (certificateHashes, recipientAddresses, fromAddress) => {
     try {
+        const web3 = new Web3(process.env.REACT_APP_WEB3_PROVIDER);
+        const checksumFrom = web3.utils.toChecksumAddress(fromAddress);
+        const normalizedHashes = certificateHashes.map((hash) => (hash.startsWith('0x') ? hash : '0x' + hash));
+        const checksumRecipients = recipientAddresses.map((address) => web3.utils.toChecksumAddress(address));
         const contract = getCertificateStoreContract();
         
         const gasEstimate = await contract.methods
-        .batchIssueCertificates(certificateHashes, recipientAddresses)
-        .estimateGas({ from: fromAddress });
+        .batchIssueCertificates(normalizedHashes, checksumRecipients)
+        .estimateGas({ from: checksumFrom });
         
         const tx = await contract.methods
-        .batchIssueCertificates(certificateHashes, recipientAddresses)
+        .batchIssueCertificates(normalizedHashes, checksumRecipients)
         .send({
-            from: fromAddress,
-            gas: Math.floor(gasEstimate * 1.2),
+            from: checksumFrom,
+            gas: withGasBuffer(gasEstimate),
         });
         
         return { success: true, tx };

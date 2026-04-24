@@ -29,6 +29,13 @@ const VerifyPage = ({ showToast }) => {
       
       if (verifyResult.success && verifyResult.data.is_valid) {
         showToast('Verification successful!', 'success');
+      } else if (verifyResult.success && verifyResult.data?.status === 'REVOKED') {
+        const revokedAt = verifyResult.data?.revoked_at
+          ? new Date(verifyResult.data.revoked_at).toLocaleString()
+          : (verifyResult.data?.revocation_time
+            ? new Date(verifyResult.data.revocation_time * 1000).toLocaleString()
+            : 'unknown time');
+        showToast(`Verification failed, certificate exists but was revoked at ${revokedAt}.`, 'error');
       } else {
         showToast('Verification failed', 'error');
       }
@@ -84,6 +91,29 @@ const VerifyPage = ({ showToast }) => {
                       <p><strong>Issued At:</strong> {new Date(result.data.issuance_time * 1000).toLocaleString()}</p>
                       <p><strong>Status:</strong> {result.data.status}</p>
                     </div>
+                  </>
+                ) : result.success && result.data?.status === 'REVOKED' ? (
+                  <>
+                    <h2 className="text-2xl font-bold text-red-800 mb-4">
+                      ❌ Verification Failed
+                    </h2>
+                    <p className="text-red-900 mb-2">
+                      Certificate exists but was revoked.
+                    </p>
+                    <p className="text-red-900 mb-2">
+                      <strong>Revoked At:</strong>{' '}
+                      {result.data?.revoked_at
+                        ? new Date(result.data.revoked_at).toLocaleString()
+                        : (result.data?.revocation_time
+                          ? new Date(result.data.revocation_time * 1000).toLocaleString()
+                          : 'Unknown')}
+                    </p>
+                    <p className="text-red-900 mb-2">
+                      <strong>Issued By:</strong> {result.data?.issuer_name || 'Unknown'}
+                    </p>
+                    <p className="text-red-900">
+                      <strong>Issued To:</strong> {result.data?.recipient || 'Unknown'}
+                    </p>
                   </>
                 ) : (
                   <>

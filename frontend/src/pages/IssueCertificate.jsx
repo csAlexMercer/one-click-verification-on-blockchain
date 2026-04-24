@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
+import { issueCertificate, isRegisteredIssuer, revokeCertificate } from '../services/contracts';
 
 const IssuePage = ({ account, showToast }) => {
   const [file, setFile] = useState(null);
@@ -28,18 +29,40 @@ const IssuePage = ({ account, showToast }) => {
       if (!hashRes.success) throw new Error('Hash calculation failed');
       
       const hash = hashRes.data.hash;
-      
-      // TODO: Issue certificate via smart contract
-      // const contract = getCertificateStoreContract();
-      // await contract.methods.issueCertificate(hash, recipient).send({from: account});
-      
+
+      const authenticated = await isRegisteredIssuer(account);
+      if (!authenticated) {
+        const failureMessage = 'Unauthenticated Entity Detected - Certificate not issued!';
+        showToast(failureMessage, 'error');
+        setMessage(`❌ ${failureMessage}`);
+        return;
+      }
+
+      const result = await issueCertificate(hash, recipient, account);
+      if (!result?.success) {
+        throw new Error('Blockchain transaction failed');
+      }
+
       showToast('Certificate issued successfully!', 'success');
       setMessage('✅ Certificate issued successfully on blockchain!');
       setFile(null);
       setRecipient('');
     } catch (err) {
-      showToast('Issuance failed: ' + err.message, 'error');
-      setMessage('❌ Certificate issuance failed: ' + err.message);
+      const unauthenticated =
+        err?.message?.includes('onlyRegisteredIssuer') ||
+        err?.message?.includes('registered issuer') ||
+        err?.message?.includes('unauthori') ||
+        err?.message?.includes('Unauthorized') ||
+        err?.message?.includes('Invalid issuer');
+
+      if (unauthenticated) {
+        const failureMessage = 'Unauthenticated Entity Detected - Certificate not issued!';
+        showToast(failureMessage, 'error');
+        setMessage(`❌ ${failureMessage}`);
+      } else {
+        showToast('Issuance failed: ' + err.message, 'error');
+        setMessage('❌ Certificate issuance failed: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -50,20 +73,52 @@ const IssuePage = ({ account, showToast }) => {
       showToast('Please select a certificate to revoke', 'error');
       return;
     }
+
+    if (!account) {
+      showToast('Please connect your wallet', 'error');
+      return;
+    }
     
     setLoading(true);
+    setMessage('');
     try {
       const hashRes = await api.calculateHash(revokeFile);
       if (!hashRes.success) throw new Error('Hash calculation failed');
-      
-      // TODO: Revoke via smart contract
-      // const contract = getCertificateStoreContract();
-      // await contract.methods.revokeCertificate(hash).send({from: account});
-      
+
+      const hash = hashRes.data.hash;
+
+      const authenticated = await isRegisteredIssuer(account);
+      if (!authenticated) {
+        const failureMessage = 'Unauthenticated Entity Detected - Certificate not revoked!';
+        showToast(failureMessage, 'error');
+        setMessage(`❌ ${failureMessage}`);
+        return;
+      }
+
+      const result = await revokeCertificate(hash, account);
+      if (!result?.success) {
+        throw new Error('Blockchain revocation transaction failed');
+      }
+
       showToast('Certificate revoked successfully!', 'success');
+      setMessage('✅ Certificate revoked successfully on blockchain!');
       setRevokeFile(null);
     } catch (err) {
-      showToast('Revocation failed: ' + err.message, 'error');
+      const unauthenticated =
+        err?.message?.includes('onlyRegisteredIssuer') ||
+        err?.message?.includes('registered issuer') ||
+        err?.message?.includes('unauthori') ||
+        err?.message?.includes('Unauthorized') ||
+        err?.message?.includes('Invalid issuer');
+
+      if (unauthenticated) {
+        const failureMessage = 'Unauthenticated Entity Detected - Certificate not revoked!';
+        showToast(failureMessage, 'error');
+        setMessage(`❌ ${failureMessage}`);
+      } else {
+        showToast('Revocation failed: ' + err.message, 'error');
+        setMessage('❌ Certificate revocation failed');
+      }
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.services.blockchain import get_blockchain_service
 from app.services.pdf_handler import get_pdf_handler
 import logging
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('verification', __name__)
@@ -23,7 +24,19 @@ def verify_by_file():
 
         if verification['is_valid']:
             status = 'REVOKED' if verification['is_revoked'] else 'ACTIVE'
-            message = f"Certificate is {status}"
+            revocation_time = 0
+            revoked_at = None
+            if verification['is_revoked']:
+                details = blockchain.get_certificate_details(hash_bytes)
+                revocation_time = details.get('revocation_time', 0)
+                if revocation_time:
+                    revoked_at = datetime.fromtimestamp(revocation_time, tz=timezone.utc).isoformat()
+
+            if verification['is_revoked']:
+                message = f"Verification failed, certificate exists but was revoked at {revoked_at or revocation_time}."
+            else:
+                message = f"Certificate is {status}"
+
             return jsonify({
                 'success': True,
                 'data': {
@@ -34,6 +47,8 @@ def verify_by_file():
                     'recipient': verification['recipient'],
                     'issuance_time': verification['issuance_time'],
                     'is_revoked': verification['is_revoked'],
+                    'revocation_time': revocation_time,
+                    'revoked_at': revoked_at,
                     'status': status
                 },
                 'message': message
@@ -71,14 +86,27 @@ def verify_by_hash():
         if verification['is_valid']:
             status = 'REVOKED' if verification['is_revoked'] else 'ACTIVE'
 
+            revocation_time = 0
+            revoked_at = None
+            message = f"Certificate is {status}"
+            if verification['is_revoked']:
+                details = blockchain.get_certificate_details(hash_bytes)
+                revocation_time = details.get('revocation_time', 0)
+                if revocation_time:
+                    revoked_at = datetime.fromtimestamp(revocation_time, tz=timezone.utc).isoformat()
+                message = f"Verification failed, certificate exists but was revoked at {revoked_at or revocation_time}."
+
             return jsonify({
                 'success': True,
                 'data': {
                     'is_valid': not verification['is_revoked'],
                     'issuer_name': verification['issuer_name'],
+                    'revocation_time': revocation_time,
+                    'revoked_at': revoked_at,
                     'status': status,
                     **verification
-                }
+                },
+                'message': message
             }), 200
         else:
             return jsonify({

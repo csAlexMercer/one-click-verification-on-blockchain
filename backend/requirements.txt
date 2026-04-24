@@ -30,6 +30,10 @@ sentry-sdk[flask]==1.32.0
 
 # Environment
 python-decouple==3.8
+python-dotenv==1.0.1
+
+# Blockchain
+web3==7.13.0
 
 # Production Server
 gunicorn==21.2.0

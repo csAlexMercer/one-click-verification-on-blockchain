@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Web3Service from '../services/web3';
 import api from '../services/api';
-import { getIssuerRegistryContract } from '../services/contracts';
 
-const account = '0x31CcD39D841f15462015982A366D00deA1c2Ec99'.toLowerCase();
-
-const AdminDashboard = ({ showToast }) => {
+const AdminDashboard = ({ account, showToast }) => {
   const [stats, setStats] = useState({ 
     total_issuers: 0, 
     active_issuers: 0, 
@@ -24,13 +20,8 @@ const AdminDashboard = ({ showToast }) => {
       if (statsRes.success) setStats(statsRes.data);
       
       // Fetch pending registrations
-      try {
-        const pendingRes = await api.getPendingRegistrations();
-        if (pendingRes.success) setPending(pendingRes.data || []);
-      } catch (err) {
-        // Endpoint not implemented yet
-        setPending([]);
-      }
+      const pendingRes = await api.getPendingRegistrations();
+      if (pendingRes.success) setPending(pendingRes.data || []);
     } catch (err) {
       showToast('Failed to load data', 'error');
     } finally {
@@ -40,16 +31,13 @@ const AdminDashboard = ({ showToast }) => {
   
   const handleAccept = async (institution) => {
     try {
-      await Web3Service.connectWallet();
-      const contract = getIssuerRegistryContract();
-      await contract.methods.registerIssuer(
-        institution.address, 
-        institution.name, 
-        institution.location
-      ).send({from: account});
-      
-      showToast('Institution approved!', 'success');
-      fetchData();
+      const result = await api.approveIssuer(institution.issuer_address || institution.address);
+      if (result.success) {
+        showToast('Institution approved and registered on blockchain!', 'success');
+        fetchData();
+      } else {
+        showToast('Approval failed: ' + result.message, 'error');
+      }
     } catch (err) {
       showToast('Approval failed: ' + err.message, 'error');
     }
@@ -98,7 +86,7 @@ const AdminDashboard = ({ showToast }) => {
                 <div>
                   <h3 className="font-bold text-lg">{inst.name}</h3>
                   <p className="text-gray-600">{inst.location}</p>
-                  <p className="text-sm text-gray-500">{inst.address}</p>
+                  <p className="text-sm text-gray-500">{inst.issuer_address}</p>
                   <p className="text-sm text-gray-500">{inst.email}</p>
                 </div>
                 <button 
